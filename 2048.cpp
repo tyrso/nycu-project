@@ -688,14 +688,20 @@ public:
 	 * you may simply return state() if no valid move
 	 */
 	state select_best_move(const board& b) const {
-		// TODO
+		// TODO (complete)
 		state after[4] = { 0, 1, 2, 3 }; // up, right, down, left
-		std::swap(after[3], after[rand() % 4]);
+		/*std::swap(after[3], after[rand() % 4]);
 		std::swap(after[2], after[rand() % 3]);
-		std::swap(after[1], after[rand() % 2]);
+		std::swap(after[1], after[rand() % 2]);*/
+		bool could =0;
+		state id;
 		for (state& move : after) {
-			if (move.assign(b)) return move;
+			if (move.assign(b)){
+				if (!could) could=1,id=move;
+				else if(move.value()>id.value()) id=move;
+			}
 		}
+		if(could) return id;
 		return state();
 	}
 
@@ -715,7 +721,12 @@ public:
 	 */
 	void update_episode(std::vector<state>& path, float alpha = 0.1) const {
 		// TODO
-		path.clear();
+		float prev_value=0;
+		for(int i=path.size()-1;i>=0;i--){
+			state& now = path[i];
+			now.set_value(now.value()+alpha*(now.reward()+prev_value-now.value()));
+			prev_value = now.value();
+		}
 	}
 
 	/**
