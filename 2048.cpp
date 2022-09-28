@@ -65,15 +65,15 @@ public:
 	 */
 	int  fetch(int i) const { return ((raw >> (i << 4)) & 0xffff); }
 	/**
-	 * set a 16-bit row
+	 * set a 16-bit row(放一排)
 	 */
 	void place(int i, int r) { raw = (raw & ~(0xffffULL << (i << 4))) | (uint64_t(r & 0xffff) << (i << 4)); }
 	/**
-	 * get a 4-bit tile
+	 * get a 4-bit tile(抓一格)
 	 */
 	int  at(int i) const { return (raw >> (i << 2)) & 0x0f; }
 	/**
-	 * set a 4-bit tile(抓一格)
+	 * set a 4-bit tile(放一格)
 	 */
 	void set(int i, int t) { raw = (raw & ~(0x0fULL << (i << 2))) | (uint64_t(t & 0x0f) << (i << 2)); }
 
