@@ -697,8 +697,10 @@ public:
 		state id;
 		for (state& move : after) {
 			if (move.assign(b)){
+				float nowvalue = estimate(move.after_state());
+				move.set_value(nowvalue);
 				if (!could) could=1,id=move;
-				else if(move.value()>id.value()) id=move;
+				else if(move.value()+move.reward()>id.value()+id.reward()) id=move;
 			}
 		}
 		if(could) return id;
@@ -722,11 +724,13 @@ public:
 	void update_episode(std::vector<state>& path, float alpha = 0.1) const {
 		// TODO
 		float prev_value=0;
-		for(int i=path.size()-1;i>=0;i--){
+		for(int i=path.size()-2;i>=0;i--){
 			state& now = path[i];
-			now.set_value(now.value()+alpha*(now.reward()+prev_value-now.value()));
-			prev_value = now.value();
+			float nowvalue = estimate(now.after_state());
+			now.set_value(alpha*((i==path.size()-2?0:path[i+1].reward())+ prev_value - nowvalue));
+			prev_value = update(now.after_state(),now.value());
 		}
+		path.clear();
 	}
 
 	/**
@@ -846,7 +850,7 @@ int main(int argc, const char* argv[]) {
 
 	// set the learning parameters
 	float alpha = 0.1;
-	size_t total = 100000;
+	size_t total = 500;
 	unsigned seed = 0;
 	info << "alpha = " << alpha << std::endl;
 	info << "total = " << total << std::endl;
@@ -860,7 +864,7 @@ int main(int argc, const char* argv[]) {
 	tdl.add_feature(new pattern({ 4, 5, 6, 8, 9, 10 }));
 
 	// restore the model from file
-	tdl.load("");
+	tdl.load("model");
 
 	// train the model
 	std::vector<state> path;
@@ -890,12 +894,12 @@ int main(int argc, const char* argv[]) {
 
 		// update by TD(0)
 		tdl.update_episode(path, alpha);
-		tdl.make_statistic(n, b, score);
+		tdl.make_statistic(n, b, score,50);
 		path.clear();
 	}
 
 	// store the model into file
-	tdl.save("");
+	tdl.save("model");
 
 	return 0;
 }
