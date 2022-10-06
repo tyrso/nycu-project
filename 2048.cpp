@@ -332,7 +332,7 @@ public: // should be implemented
 	/**
 	 * update the value of a given board, and return its updated value
 	 */
-	virtual float update(const board& b, float u) = 0;
+	virtual float update(const board& b, float u) = 0;//?
 	/**
 	 * get the name of this feature
 	 */
@@ -667,7 +667,7 @@ public:
 	 */
 	float update(const board& b, float u) const {
 		debug << "update " << " (" << u << ")" << std::endl << b;
-		float u_split = u / feats.size();
+		float u_split = u / feats.size();//?
 		float value = 0;
 		for (feature* feat : feats) {
 			value += feat->update(b, u_split);
@@ -705,6 +705,9 @@ public:
 		}
 		if(could) return id;
 		return state();
+	}
+	state select_best_move2(const board &b){
+		//todo
 	}
 
 	/**
@@ -878,7 +881,7 @@ int main(int argc, const char* argv[]) {
 		b.init();
 		while (true) {
 			debug << "state" << std::endl << b;
-			state best = tdl.select_best_move(b);
+			state best = tdl.select_best_move(b);//todo(create new test function)
 			path.push_back(best);
 
 			if (best.is_valid()) {
