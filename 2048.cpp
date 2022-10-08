@@ -95,7 +95,7 @@ private:
 		int right; // right operation
 		int score; // merge reward
 
-		void init(int r) {
+		void init(int r) {// caculate all situaltion	
 			raw = r;
 
 			int V[4] = { (r >> 0) & 0x0f, (r >> 4) & 0x0f, (r >> 8) & 0x0f, (r >> 12) & 0x0f };
@@ -169,7 +169,7 @@ public:
 	 * 2-tile: 90%
 	 * 4-tile: 10%
 	 */
-	void popup() {
+	void popup() {//random a new situation
 		int space[16], num = 0;
 		for (int i = 0; i < 16; i++)
 			if (at(i) == 0) {
@@ -707,8 +707,18 @@ public:
 		return state();
 	}
 	state select_best_move2(const board &b){
-		//todo
+		//TODO
+		state after[4] = { 0, 1, 2, 3 }; 
+		for(state& move : after){
+			
+		}
 	}
+	float dfs(const board &b){
+		float reward = 0;
+		
+	}
+	
+	
 
 	/**
 	 * update the tuple network by an episode
@@ -767,7 +777,7 @@ public:
 				error << "wrong statistic size for show statistics" << std::endl;
 				std::exit(2);
 			}
-			int sum = std::accumulate(scores.begin(), scores.end(), 0);
+			int sum = std::accumulate(scores.begin(), scores.end(), 0);//std function sum up all score
 			int max = *std::max_element(scores.begin(), scores.end());
 			int stat[16] = { 0 };
 			for (int i = 0; i < 16; i++) {
@@ -841,7 +851,7 @@ public:
 		}
 	}
 
-private:
+private:// board variable
 	std::vector<feature*> feats;
 	std::vector<int> scores;
 	std::vector<int> maxtile;
