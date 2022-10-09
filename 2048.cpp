@@ -162,7 +162,7 @@ public:
 	/**
 	 * reset to initial state (2 random tile on board)
 	 */
-	void init() { raw = 0; popup(); popup(); }
+	void init() { raw = 0; popup(); popup(); } // initial the bigining of game
 
 	/**
 	 * add a new random tile on board, or do nothing if the board is full
@@ -304,7 +304,7 @@ public:
 		return out;
 	}
 
-private:
+private://board variable
 	uint64_t raw;
 };
 
@@ -616,7 +616,7 @@ public:
 		}
 		return out;
 	}
-private:
+private:// state variable
 	board before;
 	board after;
 	int opcode;
@@ -713,7 +713,9 @@ public:
 			
 		}
 	}
-	float dfs(const board &b){
+	float tree_search(const board &b,int dep=3){
+		if(dep==0){
+		}
 		float reward = 0;
 		
 	}
@@ -735,7 +737,7 @@ public:
 	 *  where (x,x,x,x) means (before state, after state, action, reward)
 	 */
 	void update_episode(std::vector<state>& path, float alpha = 0.1) const {
-		// TODO
+		// TODO (complete)
 		float prev_value=0;
 		for(int i=path.size()-2;i>=0;i--){
 			state& now = path[i];
@@ -851,7 +853,7 @@ public:
 		}
 	}
 
-private:// board variable
+private:// learn variable
 	std::vector<feature*> feats;
 	std::vector<int> scores;
 	std::vector<int> maxtile;
