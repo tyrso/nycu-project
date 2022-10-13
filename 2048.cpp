@@ -709,15 +709,39 @@ public:
 	state select_best_move2(const board &b){
 		//TODO
 		state after[4] = { 0, 1, 2, 3 }; 
+		state best;float best_value = 0;
 		for(state& move : after){
-			
+			if(move.assign(b)){
+				float tmp=tree_search_popup(move.after_state());
+				if(tmp > best_value) best=move,best_value=tmp;
+			}
 		}
+		return best;
 	}
-	float tree_search(const board &b,int dep=3){
-		if(dep==0){
+	float tree_search_popup(const board& b,int dep=1){
+		float score = 0,num=0;
+		for(int i=0;i<16;i++){
+			if(!b.at(i)){
+				num++;
+				board node1 = b,node2 =b;
+				node1.set(i,1),node2.set(i,2);
+				score+=0.9*tree_search_move(node1,dep-1);
+				score+=0.1*tree_search_move(node2,dep-1);
+			}
 		}
-		float reward = 0;
-		
+		return score/num;
+	}
+	float tree_search_move(const board&b,int dep=1){
+		state after[4] = {0,1,2,3};
+		float score=0;
+		for(state& move : after){
+			if(move.assign(b)){
+				board now = move.after_state();
+				float tmp = dep?tree_search_popup(now,dep-1):estimate(now)+move.reward();
+				if(tmp > score) score = tmp;
+			}
+		}
+		return score;
 	}
 	
 	
@@ -893,7 +917,7 @@ int main(int argc, const char* argv[]) {
 		b.init();
 		while (true) {
 			debug << "state" << std::endl << b;
-			state best = tdl.select_best_move(b);//todo(create new test function)
+			state best = tdl.select_best_move2(b);//todo(create new test function)
 			path.push_back(best);
 
 			if (best.is_valid()) {
@@ -909,7 +933,7 @@ int main(int argc, const char* argv[]) {
 
 		// update by TD(0)
 		tdl.update_episode(path, alpha);
-		tdl.make_statistic(n, b, score,50);
+		tdl.make_statistic(n, b, score,1);// for tree search
 		path.clear();
 	}
 
