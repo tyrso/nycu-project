@@ -25,7 +25,7 @@
 #include <sstream>
 #include <fstream>
 #include <cmath>
-
+#include <ctime>
 /**
  * output streams
  * to enable debugging (more output), just change the line to 'std::ostream& debug = std::cout;'
@@ -706,6 +706,7 @@ public:
 		if(could) return id;
 		return state();
 	}
+	float value_plus_reward(state move){return move.value()+move.reward();}
 	state select_best_move2(const board &b, int dep=1){
 		//TODO
 		state after[4] = { 0, 1, 2, 3 }; 
@@ -725,8 +726,8 @@ public:
 				num++;
 				board node1 = b,node2 =b;
 				node1.set(i,1),node2.set(i,2);
-				score+=0.9*tree_search_move(node1,dep-1);
-				score+=0.1*tree_search_move(node2,dep-1);
+				score+=0.9*(dep?tree_search_move(node1,dep-1):estimate(node1));
+				score+=0.1*(dep?tree_search_move(node2,dep-1):estimate(node2));
 			}
 		}
 		return score/num;
@@ -734,10 +735,13 @@ public:
 	float tree_search_move(const board&b,int dep){
 		state after[4] = {0,1,2,3};
 		float score=0;
+		float alphax=-1;
 		for(state& move : after){
 			if(move.assign(b)){
 				board now = move.after_state();
+				//if(estimate(now)+move.reward()<score-1000) continue;
 				float tmp = dep?tree_search_popup(now,dep-1):estimate(now)+move.reward();
+				//if(alpha)
 				if(tmp > score) score = tmp;
 			}
 		}
@@ -884,12 +888,14 @@ private:// learn variable
 };
 
 int main(int argc, const char* argv[]) {
+    clock_t a,b;
+	a=clock();
 	info << "TDL2048-Demo" << std::endl;
 	learning tdl;
 
 	// set the learning parameters
 	float alpha = 0.1;
-	size_t total = 50;
+	size_t total = 10;
 	unsigned seed = 0;
 	info << "alpha = " << alpha << std::endl;
 	info << "total = " << total << std::endl;
@@ -928,17 +934,19 @@ int main(int argc, const char* argv[]) {
 			} else {
 				break;
 			}
+			info << best.value()+best.reward() << '\n';
 		}
 		debug << "end episode" << std::endl;
 
 		// update by TD(0)
 		tdl.update_episode(path, alpha);
-		tdl.make_statistic(n, b, score,10);// for tree search
+		tdl.make_statistic(n, b, score,1);// for tree search
 		path.clear();
 	}
 
 	// store the model into file
 	tdl.save("model");
-
+	b=clock();
+	info << a-b;
 	return 0;
 }
