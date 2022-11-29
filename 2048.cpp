@@ -709,7 +709,7 @@ public:
 		state best;float best_value = 0;
 		for(state& move : after){
 			if(move.before_state().find_max_loc()!=move.after_state().find_max_loc()){
-				if(move.before_state().find_max_value()==move.after_state().find_max_value()) break;
+				if(move.before_state().find_max_value()==move.after_state().find_max_value()) continue;
 			}
 			if(move.assign(b)){
 				float tmp=tree_search_popup(move.after_state(),dep);
@@ -737,6 +737,9 @@ public:
 		float alphax=-1;
 		for(state& move : after){
 			if(move.assign(b)){
+				if(move.before_state().find_max_loc()!=move.after_state().find_max_loc()){
+					if(move.before_state().find_max_value()==move.after_state().find_max_value()) continue;
+				}
 				board now = move.after_state();
 				float tmp = dep?tree_search_popup(now,dep-1):estimate(now)+move.reward();
 				if(tmp > score) score = tmp;
