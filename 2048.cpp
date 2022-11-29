@@ -179,6 +179,21 @@ public:
 			set(space[rand() % num], rand() % 10 ? 1 : 2);
 	}
 
+	int find_max_value(){ // to find the biggest tile value
+		int idx=0;
+		for(int i=1;i<16;i++)if(at(i) > at(idx)) idx=i;
+		return at(idx);
+	}
+	int find_max_loc(){ // to find the biggest tile location
+		int idx=0;
+		for(int i=1;i<16;i++)if(at(i) > at(idx)) idx=i;
+		if(at(idx)<11) return 0;
+		if(idx/4<2 and idx%4<2) return 1;
+		if(idx/4<2 and idx%4>1) return 2;
+		if(idx/4>1 and idx%4<2) return 3;
+		if(idx/4>1 and idx%4>1) return 4;
+	}
+
 	/**
 	 * apply an action to the board
 	 * return the reward gained by the action, or -1 if the action is illegal
@@ -687,31 +702,15 @@ public:
 	 *
 	 * you may simply return state() if no valid move
 	 */
-	state select_best_move(const board& b) const {
-		// TODO (complete)
-		state after[4] = { 0, 1, 2, 3 }; // up, right, down, left
-		/*std::swap(after[3], after[rand() % 4]);
-		std::swap(after[2], after[rand() % 3]);
-		std::swap(after[1], after[rand() % 2]);*/
-		bool could =0;
-		state id;
-		for (state& move : after) {
-			if (move.assign(b)){
-				float nowvalue = estimate(move.after_state());
-				move.set_value(nowvalue);
-				if (!could) could=1,id=move;
-				else if(move.value()+move.reward()>id.value()+id.reward()) id=move;
-			}
-		}
-		if(could) return id;
-		return state();
-	}
 	float value_plus_reward(state move){return move.value()+move.reward();}
 	state select_best_move2(const board &b, int dep=1){
 		//TODO
 		state after[4] = { 0, 1, 2, 3 }; 
 		state best;float best_value = 0;
 		for(state& move : after){
+			if(move.before_state().find_max_loc()!=move.after_state().find_max_loc()){
+				if(move.before_state().find_max_value()==move.after_state().find_max_value()) break;
+			}
 			if(move.assign(b)){
 				float tmp=tree_search_popup(move.after_state(),dep);
 				if(tmp > best_value) best=move,best_value=tmp;
@@ -739,9 +738,7 @@ public:
 		for(state& move : after){
 			if(move.assign(b)){
 				board now = move.after_state();
-				//if(estimate(now)+move.reward()<score-1000) continue;
 				float tmp = dep?tree_search_popup(now,dep-1):estimate(now)+move.reward();
-				//if(alpha)
 				if(tmp > score) score = tmp;
 			}
 		}
