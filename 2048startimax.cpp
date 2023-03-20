@@ -870,7 +870,11 @@ private:// learn variable
 	std::vector<int> scores;
 	std::vector<int> maxtile;
 };
-
+int score_to_ply(int &score){
+	if(score < 30000) return 0;
+	if(score < 100000) return 1;
+	return 2;
+}
 int main(int argc, const char* argv[]) {
 	info << "TDL2048-Demo" << std::endl;
 	info << "startimax version" << std::endl;
@@ -910,7 +914,7 @@ int main(int argc, const char* argv[]) {
 		b.init();
 		while (true) {
 			//info << "state" << std::endl << b;
-			state best = tdl.select_best_move_startimax(b,ply,worst_rate);//todo(create new test function)
+			state best = tdl.select_best_move_startimax(b,score_to_ply(score),worst_rate);//todo(create new test function)
 			path.push_back(best);
 
 			if (best.is_valid()) {
@@ -924,7 +928,6 @@ int main(int argc, const char* argv[]) {
 			
 		}
 		//info << "end episode" << std::endl;
-		info << "stop" << '\n';
 		// update by TD(0)
 		tdl.update_episode(path, alpha);
 		tdl.make_statistic(n, b, score,10);// for tree search
