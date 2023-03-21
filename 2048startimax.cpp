@@ -870,26 +870,29 @@ private:// learn variable
 	std::vector<int> scores;
 	std::vector<int> maxtile;
 };
+int ply1=5000,ply3=150000;
 int score_to_ply(int &score){
-	if(score < 30000) return 0;
-	if(score < 100000) return 1;
+	if(score < ply1) return 0;
+	if(score < ply3) return 1;
 	return 2;
 }
 int main(int argc, const char* argv[]) {
+	if(ply3 < ply1) {info << "ply error";return 0;}// assert pl3 >= ply1
+	clock_t start;start=clock();// record the start time
 	info << "TDL2048-Demo" << std::endl;
 	info << "startimax version" << std::endl;
 	learning tdl;
-	clock_t start;start=clock();
 	// set the learning parameters
 	float alpha = 0.1;
 	size_t total = 10;
 	unsigned seed = 0;
-	int ply=1;
     float worst_rate = 0.7;
 	info << "alpha = " << alpha << std::endl;
 	info << "total = " << total << std::endl;
 	info << "seed = " << seed << std::endl;
-	info << "ply = " << ply*2+1 << std::endl;
+	info << "ply1 = " << ply1 << std::endl;
+	info << "ply3 = " << ply3 << std::endl;
+	info << "ply5 = " << "inf"<< std::endl;
     info << "worst_rate = " << worst_rate << std::endl;
 	std::srand(seed);
 
@@ -933,9 +936,11 @@ int main(int argc, const char* argv[]) {
 		tdl.make_statistic(n, b, score,10);// for tree search
 		path.clear();
 	}
-	clock_t over;over=clock();
+	
+	clock_t over;over=clock();//record the over time
 	info << "startimax version" << std::endl;
 	info << "time(sec) for "<< total<< " round:" <<  over-start << "ms";
+	
 	// store the model into file
 	//tdl.save("model");
 	return 0;
