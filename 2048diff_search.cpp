@@ -687,49 +687,71 @@ public:
 	 *
 	 * you may simply return state() if no valid move
 	 */
-	state select_best_move_startimax(const board &b, int dep=1,float worst_rate=0.7){
+	state select_best_move_diff(const board &b, int dep,float &worst_rate,float &diff_rate){
 		//TODO
 		state after[4] = { 0, 1, 2, 3 }; 
-		state best;float best_value = 0;
+		state best;float best_value = 0,sum = 0 ,mx = 0 , cnt=0;
+        for(state& move : after){
+			if(move.assign(b)){
+				board now = move.after_state();
+				int nowval=estimate(now)+move.reward();sum+=nowval;
+				if(nowval> mx) best=move,mx=nowval;
+				cnt+=1;
+			}
+		}
+		if(sum == 0) return best;
+		float sigma = (mx*cnt-sum)/sum;
+		if((!dep) or sigma > diff_rate) return best;
 		for(state& move : after){
 			if(move.assign(b)){
 				board now = move.after_state();
-                if(estimate(now)+move.reward()<best_value*worst_rate) continue;
-				float tmp=(dep?tree_search_popup(now,dep,best_value,worst_rate):estimate(now))+move.reward();
+				float nowval=estimate(now)+move.reward();
+                if(nowval<best_value*worst_rate) continue;
+				float tmp=tree_search_popup(now,dep,best_value,worst_rate,diff_rate)+move.reward();
 				if(tmp > best_value) best=move,best_value=tmp;
 			}
 		}	
 		return best;
 	}
-	float tree_search_popup(const board& b,int dep,float mxval,float worst_rate=0.7){
+	float tree_search_popup(const board& b,int dep,float mxval,float &worst_rate,float &diff_rate){
 		float score = 0,num=0;
-		float L,U;
 		for(int i=0;i<16;i++){
 			if(!b.at(i)){
 				num++;
 				board node1 = b,node2 =b;
 				node1.set(i,1),node2.set(i,2);
-				score+=0.9*tree_search_move(node1,dep-1,mxval,worst_rate);
-				score+=0.1*tree_search_move(node2,dep-1,mxval,worst_rate);
+				score+=0.9*tree_search_move(node1,dep-1,mxval,worst_rate,diff_rate);
+				score+=0.1*tree_search_move(node2,dep-1,mxval,worst_rate,diff_rate);
 				if(score/num < mxval*worst_rate) break;
 				if(score/num > mxval) mxval=score/num;
 			}
 		}
 		return score/num;
 	}
-	float tree_search_move(const board&b,int dep,float mxval,float worst_rate=0.7){
+	float tree_search_move(const board&b,int dep,float mxval,float &worst_rate,float &diff_rate){
 		state after[4] = {0,1,2,3};
+		float sum=0,mx=0,cnt=0;
+		for(state& move : after){
+			if(move.assign(b)){
+				board now = move.after_state();
+				int nowval=estimate(now)+move.reward();sum+=nowval;
+				if(nowval> mx) mx=nowval;
+				cnt+=1;
+			}
+		}
+		if(sum == 0) return 0;
+		float sigma = (mx*cnt-sum)/sum;
+		if((!dep) or sigma > diff_rate) return mx;
 		float score=0;
 		for(state& move : after){
 			if(move.assign(b)){
 				board now = move.after_state();
                 if(estimate(now)+move.reward()< mxval*worst_rate) continue;
-				float tmp = ( dep ? tree_search_popup(now,dep,mxval,worst_rate) : estimate(now) )+move.reward();
+				float tmp = ( dep ? tree_search_popup(now,dep,mxval,worst_rate,diff_rate) : estimate(now) )+move.reward();
 				if(tmp > score) score = tmp;
 				if(score > mxval)mxval = score;
 			}
 		}
-		if(score == 0) return estimate(b);//?not sure that can work
 		return score;
 	}
 	
@@ -871,7 +893,7 @@ private:// learn variable
 	std::vector<int> scores;
 	std::vector<int> maxtile;
 };
-int ply1=5000,ply3=150000;
+int ply1=3000,ply3=150000;
 int score_to_ply(int &score){
 	if(score < ply1) return 0;
 	if(score < ply3) return 1;
@@ -888,6 +910,7 @@ int main(int argc, const char* argv[]) {
 	size_t total = 10;
 	unsigned seed = 0;
     float worst_rate = 0.7;
+	float diff_rate = 0.5;
 	info << "alpha = " << alpha << std::endl;
 	info << "total = " << total << std::endl;
 	info << "seed = " << seed << std::endl;
@@ -895,6 +918,7 @@ int main(int argc, const char* argv[]) {
 	info << "ply3 = " << ply3 << std::endl;
 	info << "ply5 = " << "inf"<< std::endl;
     info << "worst_rate = " << worst_rate << std::endl;
+	info << "diff_rate = " << diff_rate << std::endl;
 	std::srand(seed);
 
 	// initialize the features of the 4x6-tuple network
@@ -918,7 +942,7 @@ int main(int argc, const char* argv[]) {
 		b.init();
 		while (true) {
 			//info << "state" << std::endl << b;
-			state best = tdl.select_best_move_startimax(b,score_to_ply(score),worst_rate);//todo(create new test function)
+			state best = tdl.select_best_move_diff(b,score_to_ply(score),worst_rate,diff_rate);//todo(create new test function)
 			path.push_back(best);
 
 			if (best.is_valid()) {
