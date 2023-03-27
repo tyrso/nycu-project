@@ -28,7 +28,7 @@
 #include <ctime>
 /**
  * output streams
- * to enable //debugging (more output), just change the line to 'std::ostream& //debug = std::cout;'
+ * to enable debugging (more output), just change the line to 'std::ostream& debug = std::cout;'
  */
 std::ostream& info = std::cout;
 //std::ostream& error = std::cerr;
@@ -674,67 +674,6 @@ public:
 		}
 		return value;
 	}
-
-	/**
-	 * select a best move of a before state b
-	 *
-	 * return should be a state whose
-	 *  before_state() is b
-	 *  after_state() is b's best successor (after state)
-	 *  action() is the best action
-	 *  reward() is the reward of performing action()
-	 *  value() is the estimated value of after_state()
-	 *
-	 * you may simply return state() if no valid move
-	 */
-	state select_best_move_startimax(const board &b, int dep=1,float worst_rate=0.7){
-		//TODO
-		state after[4] = { 0, 1, 2, 3 }; 
-		state best;float best_value = 0;
-		for(state& move : after){
-			if(move.assign(b)){
-				board now = move.after_state();
-                if(estimate(now)+move.reward()<best_value*worst_rate) continue;
-				float tmp=(dep?tree_search_popup(now,dep,best_value,worst_rate):estimate(now))+move.reward();
-				if(tmp > best_value) best=move,best_value=tmp;
-			}
-		}	
-		return best;
-	}
-	float tree_search_popup(const board& b,int dep,float mxval,float worst_rate=0.7){
-		float score = 0,num=0;
-		float L,U;
-		for(int i=0;i<16;i++){
-			if(!b.at(i)){
-				num++;
-				board node1 = b,node2 =b;
-				node1.set(i,1),node2.set(i,2);
-				score+=0.9*tree_search_move(node1,dep-1,mxval,worst_rate);
-				score+=0.1*tree_search_move(node2,dep-1,mxval,worst_rate);
-				if(score/num < mxval*worst_rate) break;
-				if(score/num > mxval) mxval=score/num;
-			}
-		}
-		return score/num;
-	}
-	float tree_search_move(const board&b,int dep,float mxval,float worst_rate=0.7){
-		state after[4] = {0,1,2,3};
-		float score=0;
-		for(state& move : after){
-			if(move.assign(b)){
-				board now = move.after_state();
-                if(estimate(now)+move.reward()< mxval*worst_rate) continue;
-				float tmp = ( dep ? tree_search_popup(now,dep,mxval,worst_rate) : estimate(now) )+move.reward();
-				if(tmp > score) score = tmp;
-				if(score > mxval)mxval = score;
-			}
-		}
-		if(score == 0) return estimate(b);//?not sure that can work
-		return score;
-	}
-	
-	
-
 	/**
 	 * update the tuple network by an episode
 	 *
@@ -865,36 +804,86 @@ public:
 			out.close();
 		}
 	}
+/**
+	 * select a best move of a before state b
+	 *
+	 * return should be a state whose
+	 *  before_state() is b
+	 *  after_state() is b's best successor (after state)
+	 *  action() is the best action
+	 *  reward() is the reward of performing action()
+	 *  value() is the estimated value of after_state()
+	 *
+	 * you may simply return state() if no valid move
+	 */
+	state select_best_move_diff(const board &b, int dep){
+		//TODO
+		state after[4] = { 0, 1, 2, 3 }; 
+		state best;float best_value = 0;
+		for(state& move : after){
+			if(move.assign(b)){
+				board now = move.after_state();
+				float tmp=(dep?tree_search_popup(now,dep,best_value):estimate(now) )+move.reward();
+				if(tmp > best_value) best=move,best_value=tmp;
+			}
+		}	
+		return best;
+	}
+	float tree_search_popup(const board& b,int dep,float mxval){
+		float score = 0,num=0;
+		for(int i=0;i<16;i++){
+			if(!b.at(i)){
+				num++;
+				board node1 = b,node2 =b;
+				node1.set(i,1),node2.set(i,2);
+				score+=0.9*tree_search_move(node1,dep-1,mxval);
+				score+=0.1*tree_search_move(node2,dep-1,mxval);
+				if(score/num < mxval*worst_rate) break;
+				if(score/num > mxval) mxval=score/num;
+			}
+		}
+		return score/num;
+	}	
+	float tree_search_move(const board&b,int dep,float mxval){
+		state after[4] = {0,1,2,3};
+		float score=0;
+		for(state& move : after){
+			if(move.assign(b)){
+				board now = move.after_state();
+				float tmp = (dep?tree_search_popup(now,dep,mxval):estimate(now)) + move.reward();
+				if(tmp > score) score = tmp;
+				if(score > mxval)mxval = score;
+			}
+		}
+		return score;
+	}
+	
+	
 
 private:// learn variable
 	std::vector<feature*> feats;
 	std::vector<int> scores;
 	std::vector<int> maxtile;
+public:
+	const float worst_rate = 0.5;
+	const int ply = 2;
 };
-int ply1=5000,ply3=150000;
-int score_to_ply(int &score){
-	if(score < ply1) return 0;
-	if(score < ply3) return 1;
-	return 2;
-}
+#define lrn learning()
 int main(int argc, const char* argv[]) {
-	if(ply3 < ply1) {info << "ply error";return 0;}// assert pl3 >= ply1
+	//if(ply3 < ply1) {info << "ply error";return 0;}// assert pl3 >= ply1
 	clock_t start;start=clock();// record the start time
 	info << "TDL2048-Demo" << std::endl;
-	info << "startimax version" << std::endl;
+	info << "abcut version" << std::endl;
 	learning tdl;
 	// set the learning parameters
 	float alpha = 0.1;
-	size_t total = 10;
-	unsigned seed = 0;
-    float worst_rate = 0.7;
+	size_t total = 100;
+	unsigned seed = std::time(nullptr);
 	info << "alpha = " << alpha << std::endl;
 	info << "total = " << total << std::endl;
 	info << "seed = " << seed << std::endl;
-	info << "ply1 = " << ply1 << std::endl;
-	info << "ply3 = " << ply3 << std::endl;
-	info << "ply5 = " << "inf"<< std::endl;
-    info << "worst_rate = " << worst_rate << std::endl;
+	info << "ply = " << lrn.ply*2+1 << std::endl;
+    info << "worst_rate = " << lrn.worst_rate << std::endl;
 	std::srand(seed);
 
 	// initialize the features of the 4x6-tuple network
@@ -918,7 +907,7 @@ int main(int argc, const char* argv[]) {
 		b.init();
 		while (true) {
 			//info << "state" << std::endl << b;
-			state best = tdl.select_best_move_startimax(b,score_to_ply(score),worst_rate);//todo(create new test function)
+			state best = tdl.select_best_move_diff(b,lrn.ply);//todo(create new test function)
 			path.push_back(best);
 
 			if (best.is_valid()) {
@@ -934,7 +923,7 @@ int main(int argc, const char* argv[]) {
 		//info << "end episode" << std::endl;
 		// update by TD(0)
 		tdl.update_episode(path, alpha);
-		tdl.make_statistic(n, b, score,10);// for tree search
+		tdl.make_statistic(n, b, score,100);// for tree search
 		path.clear();
 	}
 	

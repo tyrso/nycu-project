@@ -26,9 +26,9 @@
 #include <fstream>
 #include <cmath>
 #include <ctime>
-/**
+/**2
  * output streams
- * to enable //debugging (more output), just change the line to 'std::ostream& //debug = std::cout;'
+ * to enable debugging (more output), just change the line to 'std::ostream& debug = std::cout;'
  */
 std::ostream& info = std::cout;
 //std::ostream& error = std::cerr;
@@ -628,113 +628,6 @@ class learning {
 public:
 	learning() {}
 	~learning() {}
-
-	/**
-	 * add a feature into tuple networks
-	 *
-	 * note that feats is std::vector<feature*>,
-	 * therefore you need to keep all the instances somewhere
-	 */
-	void add_feature(feature* feat) {
-		feats.push_back(feat);
-
-		info << feat->name() << ", size = " << feat->size();
-		size_t usage = feat->size() * sizeof(float);
-		if (usage >= (1 << 30)) {
-			info << " (" << (usage >> 30) << "GB)";
-		} else if (usage >= (1 << 20)) {
-			info << " (" << (usage >> 20) << "MB)";
-		} else if (usage >= (1 << 10)) {
-			info << " (" << (usage >> 10) << "KB)";
-		}
-		info << std::endl;
-	}
-
-	/**
-	 * accumulate the total value of given state
-	 */
-	float estimate(const board& b) const {
-		//debug << "estimate " << std::endl << b;
-		float value = 0;
-		for (feature* feat : feats) {
-			value += feat->estimate(b);
-		}
-		return value;
-	}
-
-	/**
-	 * update the value of given state and return its new value
-	 */
-	float update(const board& b, float u) const {
-		//debug << "update " << " (" << u << ")" << std::endl << b;
-		float u_split = u / feats.size();//?
-		float value = 0;
-		for (feature* feat : feats) {
-			value += feat->update(b, u_split);
-		}
-		return value;
-	}
-
-	/**
-	 * select a best move of a before state b
-	 *
-	 * return should be a state whose
-	 *  before_state() is b
-	 *  after_state() is b's best successor (after state)
-	 *  action() is the best action
-	 *  reward() is the reward of performing action()
-	 *  value() is the estimated value of after_state()
-	 *
-	 * you may simply return state() if no valid move
-	 */
-	state select_best_move_startimax(const board &b, int dep=1,float worst_rate=0.7){
-		//TODO
-		state after[4] = { 0, 1, 2, 3 }; 
-		state best;float best_value = 0;
-		for(state& move : after){
-			if(move.assign(b)){
-				board now = move.after_state();
-                if(estimate(now)+move.reward()<best_value*worst_rate) continue;
-				float tmp=(dep?tree_search_popup(now,dep,best_value,worst_rate):estimate(now))+move.reward();
-				if(tmp > best_value) best=move,best_value=tmp;
-			}
-		}	
-		return best;
-	}
-	float tree_search_popup(const board& b,int dep,float mxval,float worst_rate=0.7){
-		float score = 0,num=0;
-		float L,U;
-		for(int i=0;i<16;i++){
-			if(!b.at(i)){
-				num++;
-				board node1 = b,node2 =b;
-				node1.set(i,1),node2.set(i,2);
-				score+=0.9*tree_search_move(node1,dep-1,mxval,worst_rate);
-				score+=0.1*tree_search_move(node2,dep-1,mxval,worst_rate);
-				if(score/num < mxval*worst_rate) break;
-				if(score/num > mxval) mxval=score/num;
-			}
-		}
-		return score/num;
-	}
-	float tree_search_move(const board&b,int dep,float mxval,float worst_rate=0.7){
-		state after[4] = {0,1,2,3};
-		float score=0;
-		for(state& move : after){
-			if(move.assign(b)){
-				board now = move.after_state();
-                if(estimate(now)+move.reward()< mxval*worst_rate) continue;
-				float tmp = ( dep ? tree_search_popup(now,dep,mxval,worst_rate) : estimate(now) )+move.reward();
-				if(tmp > score) score = tmp;
-				if(score > mxval)mxval = score;
-			}
-		}
-		if(score == 0) return estimate(b);//?not sure that can work
-		return score;
-	}
-	
-	
-
 	/**
 	 * update the tuple network by an episode
 	 *
@@ -865,36 +758,124 @@ public:
 			out.close();
 		}
 	}
+	/**
+	 * add a feature into tuple networks
+	 *
+	 * note that feats is std::vector<feature*>,
+	 * therefore you need to keep all the instances somewhere
+	 */
+	void add_feature(feature* feat) {
+		feats.push_back(feat);
+
+		info << feat->name() << ", size = " << feat->size();
+		size_t usage = feat->size() * sizeof(float);
+		if (usage >= (1 << 30)) {
+			info << " (" << (usage >> 30) << "GB)";
+		} else if (usage >= (1 << 20)) {
+			info << " (" << (usage >> 20) << "MB)";
+		} else if (usage >= (1 << 10)) {
+			info << " (" << (usage >> 10) << "KB)";
+		}
+		info << std::endl;
+	}
+
+	/**
+	 * accumulate the total value of given state
+	 */
+	float estimate(const board& b) const {
+		//debug << "estimate " << std::endl << b;
+		float value = 0;
+		for (feature* feat : feats) {
+			value += feat->estimate(b);
+		}
+		return value;
+	}
+
+	/**
+	 * update the value of given state and return its new value
+	 */
+	float update(const board& b, float u) const {
+		//debug << "update " << " (" << u << ")" << std::endl << b;
+		float u_split = u / feats.size();//?
+		float value = 0;
+		for (feature* feat : feats) {
+			value += feat->update(b, u_split);
+		}
+		return value;
+	}
+
+	/**
+	 * select a best move of a before state b
+	 *
+	 * return should be a state whose
+	 *  before_state() is b
+	 *  after_state() is b's best successor (after state)
+	 *  action() is the best action
+	 *  reward() is the reward of performing action()
+	 *  value() is the estimated value of after_state()
+	 *
+	 * you may simply return state() if no valid move
+	 */
+	state select_best_move2(const board &b, int dep){
+		//TODO
+		state after[4] = { 0, 1, 2, 3 }; 
+		state best;float best_value = 0;
+		for(state& move : after){
+			if(move.assign(b)){
+				board now = move.after_state();
+				float tmp=(dep?tree_search_popup(now,dep):estimate(now))+move.reward();
+				if(tmp > best_value) best=move,best_value=tmp;
+			}
+		}
+		return best;
+	}
+	float tree_search_popup(const board& b,int dep){
+		float score = 0,num=0;
+		for(int i=0;i<16;i++){
+			if(!b.at(i)){
+				num+=1;
+				board node1 = b,node2 =b;
+				node1.set(i,1),node2.set(i,2);
+				score+= 0.9 * tree_search_move(node1,dep-1);
+				score+= 0.1 * tree_search_move(node2,dep-1);
+			}
+		}
+		return score/num;
+	}
+	float tree_search_move(const board&b,int dep){
+		state after[4] = {0,1,2,3};
+		float score=0;
+		for(state& move : after){
+			if(move.assign(b)){
+				board now = move.after_state();
+				float tmp = (dep?tree_search_popup(now,dep):estimate(now))+move.reward();
+				if(tmp > score) score = tmp;
+			}
+		}
+		return score;
+	}
 
 private:// learn variable
 	std::vector<feature*> feats;
 	std::vector<int> scores;
 	std::vector<int> maxtile;
 };
-int ply1=5000,ply3=150000;
-int score_to_ply(int &score){
-	if(score < ply1) return 0;
-	if(score < ply3) return 1;
-	return 2;
-}
+
 int main(int argc, const char* argv[]) {
-	if(ply3 < ply1) {info << "ply error";return 0;}// assert pl3 >= ply1
-	clock_t start;start=clock();// record the start time
+    clock_t start;
+	start=clock();
 	info << "TDL2048-Demo" << std::endl;
-	info << "startimax version" << std::endl;
+	info << "normal tree search version" << std::endl;
 	learning tdl;
 	// set the learning parameters
 	float alpha = 0.1;
-	size_t total = 10;
-	unsigned seed = 0;
-    float worst_rate = 0.7;
+	size_t total = 100;
+	unsigned seed = std::time(nullptr);;
+	int ply = 2;
 	info << "alpha = " << alpha << std::endl;
 	info << "total = " << total << std::endl;
 	info << "seed = " << seed << std::endl;
-	info << "ply1 = " << ply1 << std::endl;
-	info << "ply3 = " << ply3 << std::endl;
-	info << "ply5 = " << "inf"<< std::endl;
-    info << "worst_rate = " << worst_rate << std::endl;
+	info << "ply = " << ply*2+1 << std::endl;
 	std::srand(seed);
 
 	// initialize the features of the 4x6-tuple network
@@ -914,11 +895,11 @@ int main(int argc, const char* argv[]) {
 		int score = 0;
 
 		// play an episode
-		//info << "begin episode" << std::endl;
+		//debug << "begin episode" << std::endl;
 		b.init();
 		while (true) {
-			//info << "state" << std::endl << b;
-			state best = tdl.select_best_move_startimax(b,score_to_ply(score),worst_rate);//todo(create new test function)
+			//debug << "state" << std::endl << b;
+			state best = tdl.select_best_move2(b,ply);//todo(create new test function)
 			path.push_back(best);
 
 			if (best.is_valid()) {
@@ -931,18 +912,18 @@ int main(int argc, const char* argv[]) {
 			}
 			
 		}
-		//info << "end episode" << std::endl;
+		//debug << "end episode" << std::endl;
+
 		// update by TD(0)
 		tdl.update_episode(path, alpha);
-		tdl.make_statistic(n, b, score,10);// for tree search
+		tdl.make_statistic(n, b, score,100);// for tree search
 		path.clear();
 	}
-	
-	clock_t over;over=clock();//record the over time
-	info << "startimax version" << std::endl;
-	info << "time(sec) for "<< total<< " round:" <<  over-start << "ms";
-	
+
 	// store the model into file
 	//tdl.save("model");
+	clock_t over=clock();
+	info << "normal tree search version" << std::endl;
+	info << "time(sec) for "<< total << " round:" <<  (float)(over-start)/1e3 << "sec";
 	return 0;
 }

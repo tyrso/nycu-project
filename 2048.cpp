@@ -31,8 +31,8 @@
  * to enable debugging (more output), just change the line to 'std::ostream& debug = std::cout;'
  */
 std::ostream& info = std::cout;
-std::ostream& error = std::cerr;
-std::ostream& debug = *(new std::ofstream);
+//std::ostream& error = std::cerr;
+//std::ostream& debug = *(new std::ofstream);
 
 /**
  * 64-bit bitboard implementation for 2048
@@ -177,21 +177,6 @@ public:
 			}
 		if (num)
 			set(space[rand() % num], rand() % 10 ? 1 : 2);
-	}
-
-	int find_max_value(){ // to find the biggest tile value
-		int idx=0;
-		for(int i=1;i<16;i++)if(at(i) > at(idx)) idx=i;
-		return at(idx);
-	}
-	int find_max_loc(){ // to find the biggest tile location
-		int idx=0;
-		for(int i=1;i<16;i++)if(at(i) > at(idx)) idx=i;
-		if(at(idx)<11) return 0;
-		if(idx/4<2 and idx%4<2) return 1;
-		if(idx/4<2 and idx%4>1) return 2;
-		if(idx/4>1 and idx%4<2) return 3;
-		if(idx/4>1 and idx%4>1) return 4;
 	}
 
 	/**
@@ -381,20 +366,20 @@ public:
 		name.resize(len);
 		in.read(&name[0], len);
 		if (name != w.name()) {
-			error << "unexpected feature: " << name << " (" << w.name() << " is expected)" << std::endl;
+			//error << "unexpected feature: " << name << " (" << w.name() << " is expected)" << std::endl;
 			std::exit(1);
 		}
 		float* weight = w.weight;
 		size_t size;
 		in.read(reinterpret_cast<char*>(&size), sizeof(size_t));
 		if (size != w.size()) {
-			error << "unexpected feature size " << size << "for " << w.name();
-			error << " (" << w.size() << " is expected)" << std::endl;
+			//error << "unexpected feature size " << size << "for " << w.name();
+			//error << " (" << w.size() << " is expected)" << std::endl;
 			std::exit(1);
 		}
 		in.read(reinterpret_cast<char*>(weight), sizeof(float) * size);
 		if (!in) {
-			error << "unexpected end of binary" << std::endl;
+			//error << "unexpected end of binary" << std::endl;
 			std::exit(1);
 		}
 		return in;
@@ -409,7 +394,7 @@ protected:
 			if (total > limit) throw std::bad_alloc();
 			return new float[num]();
 		} catch (std::bad_alloc&) {
-			error << "memory limit exceeded" << std::endl;
+			//error << "memory limit exceeded" << std::endl;
 			std::exit(-1);
 		}
 		return nullptr;
@@ -436,7 +421,7 @@ class pattern : public feature {
 public:
 	pattern(const std::vector<int>& p, int iso = 8) : feature(1 << (p.size() * 4)), iso_last(iso) {
 		if (p.empty()) {
-			error << "no pattern defined" << std::endl;
+			//error << "no pattern defined" << std::endl;
 			std::exit(1);
 		}
 
@@ -595,7 +580,7 @@ public:
 	 * return true if the action is valid for the given state
 	 */
 	bool assign(const board& b) {
-		debug << "assign " << name() << std::endl << b;
+		//debug << "assign " << name() << std::endl << b;
 		after = before = b;
 		score = after.move(opcode);
 		esti = score;
@@ -611,7 +596,7 @@ public:
 	 */
 	bool is_valid() const {
 		if (std::isnan(esti)) {
-			error << "numeric exception" << std::endl;
+			//error << "numeric exception" << std::endl;
 			std::exit(1);
 		}
 		return after != before && opcode != -1 && score != -1;
@@ -669,7 +654,7 @@ public:
 	 * accumulate the total value of given state
 	 */
 	float estimate(const board& b) const {
-		debug << "estimate " << std::endl << b;
+		//debug << "estimate " << std::endl << b;
 		float value = 0;
 		for (feature* feat : feats) {
 			value += feat->estimate(b);
@@ -681,7 +666,7 @@ public:
 	 * update the value of given state and return its new value
 	 */
 	float update(const board& b, float u) const {
-		debug << "update " << " (" << u << ")" << std::endl << b;
+		//debug << "update " << " (" << u << ")" << std::endl << b;
 		float u_split = u / feats.size();//?
 		float value = 0;
 		for (feature* feat : feats) {
@@ -702,17 +687,33 @@ public:
 	 *
 	 * you may simply return state() if no valid move
 	 */
-	float value_plus_reward(state move){return move.value()+move.reward();}
-	state select_best_move2(const board &b, int dep=1){
+	state select_best_move(const board& b) const {
+		// TODO (complete)
+		state after[4] = { 0, 1, 2, 3 }; // up, right, down, left
+		/*std::swap(after[3], after[rand() % 4]);
+		std::swap(after[2], after[rand() % 3]);
+		std::swap(after[1], after[rand() % 2]);*/
+		bool could =0;
+		state id;
+		for (state& move : after) {
+			if (move.assign(b)){
+				float nowvalue = estimate(move.after_state());
+				move.set_value(nowvalue);
+				if (!could) could=1,id=move;
+				else if(move.value()+move.reward()>id.value()+id.reward()) id=move;
+			}
+		}
+		if(could) return id;
+		return state();
+	}
+	state select_best_move2(const board &b, int dep){
 		//TODO
 		state after[4] = { 0, 1, 2, 3 }; 
 		state best;float best_value = 0;
 		for(state& move : after){
-			if(move.before_state().find_max_loc()!=move.after_state().find_max_loc()){
-				if(move.before_state().find_max_value()==move.after_state().find_max_value()) continue;
-			}
 			if(move.assign(b)){
-				float tmp=tree_search_popup(move.after_state(),dep);
+				board now = move.after_state();
+				float tmp=(dep?tree_search_popup(now,dep):estimate(now))+move.reward();
 				if(tmp > best_value) best=move,best_value=tmp;
 			}
 		}
@@ -722,11 +723,11 @@ public:
 		float score = 0,num=0;
 		for(int i=0;i<16;i++){
 			if(!b.at(i)){
-				num++;
+				num+=1;
 				board node1 = b,node2 =b;
 				node1.set(i,1),node2.set(i,2);
-				score+=0.9*(dep?tree_search_move(node1,dep-1):estimate(node1));
-				score+=0.1*(dep?tree_search_move(node2,dep-1):estimate(node2));
+				score+= 0.9 * tree_search_move(node1,dep-1);
+				score+= 0.1 * tree_search_move(node2,dep-1);
 			}
 		}
 		return score/num;
@@ -734,14 +735,10 @@ public:
 	float tree_search_move(const board&b,int dep){
 		state after[4] = {0,1,2,3};
 		float score=0;
-		float alphax=-1;
 		for(state& move : after){
 			if(move.assign(b)){
-				if(move.before_state().find_max_loc()!=move.after_state().find_max_loc()){
-					if(move.before_state().find_max_value()==move.after_state().find_max_value()) continue;
-				}
 				board now = move.after_state();
-				float tmp = dep?tree_search_popup(now,dep-1):estimate(now)+move.reward();
+				float tmp = (dep?tree_search_popup(now,dep):estimate(now))+move.reward();
 				if(tmp > score) score = tmp;
 			}
 		}
@@ -804,7 +801,7 @@ public:
 
 		if (n % unit == 0) { // show the training process
 			if (scores.size() != size_t(unit) || maxtile.size() != size_t(unit)) {
-				error << "wrong statistic size for show statistics" << std::endl;
+				//error << "wrong statistic size for show statistics" << std::endl;
 				std::exit(2);
 			}
 			int sum = std::accumulate(scores.begin(), scores.end(), 0);//std function sum up all score
@@ -852,7 +849,7 @@ public:
 			size_t size;
 			in.read(reinterpret_cast<char*>(&size), sizeof(size));
 			if (size != feats.size()) {
-				error << "unexpected feature count: " << size << " (" << feats.size() << " is expected)" << std::endl;
+				//error << "unexpected feature count: " << size << " (" << feats.size() << " is expected)" << std::endl;
 				std::exit(1);
 			}
 			for (feature* feat : feats) {
@@ -888,18 +885,20 @@ private:// learn variable
 };
 
 int main(int argc, const char* argv[]) {
-    clock_t a,b;
-	a=clock();
+    clock_t start;
+	start=clock();
 	info << "TDL2048-Demo" << std::endl;
+	info << "normal tree search version" << std::endl;
 	learning tdl;
-
 	// set the learning parameters
 	float alpha = 0.1;
 	size_t total = 10;
 	unsigned seed = 0;
+	int ply = 3;
 	info << "alpha = " << alpha << std::endl;
 	info << "total = " << total << std::endl;
 	info << "seed = " << seed << std::endl;
+	info << "ply = " << ply*2+1 << std::endl;
 	std::srand(seed);
 
 	// initialize the features of the 4x6-tuple network
@@ -919,34 +918,35 @@ int main(int argc, const char* argv[]) {
 		int score = 0;
 
 		// play an episode
-		debug << "begin episode" << std::endl;
+		//debug << "begin episode" << std::endl;
 		b.init();
 		while (true) {
-			debug << "state" << std::endl << b;
-			state best = tdl.select_best_move2(b);//todo(create new test function)
+			//debug << "state" << std::endl << b;
+			state best = tdl.select_best_move2(b,ply);//todo(create new test function)
 			path.push_back(best);
 
 			if (best.is_valid()) {
-				debug << "best " << best;
+				//info << "best " << best;
 				score += best.reward();
 				b = best.after_state();
 				b.popup();
 			} else {
 				break;
 			}
-			info << best.value()+best.reward() << '\n';
+			
 		}
-		debug << "end episode" << std::endl;
+		//debug << "end episode" << std::endl;
 
 		// update by TD(0)
 		tdl.update_episode(path, alpha);
-		tdl.make_statistic(n, b, score,1);// for tree search
+		tdl.make_statistic(n, b, score,10);// for tree search
 		path.clear();
 	}
 
 	// store the model into file
-	tdl.save("model");
-	b=clock();
-	info << a-b;
+	//tdl.save("model");
+	clock_t over=clock();
+	info << "normal tree search version" << std::endl;
+	info << "time(sec) for "<< total << " round:" <<  over-start << "sec";
 	return 0;
 }
